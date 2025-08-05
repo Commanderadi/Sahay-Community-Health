@@ -36,10 +36,10 @@ console.log('PORT:', process.env.PORT || 5000);
 // CORS configuration for both development and production
 const allowedOrigins = [
   'http://localhost:3000',
+  'https://sahaycommunity.netlify.app',
+  'https://sahaycommunity.netlify.app/',
   'https://sahay-app.netlify.app',
-  'https://sahay-app.netlify.app/',
-  'https://your-app-name.netlify.app',
-  'https://your-app-name.netlify.app/'
+  'https://sahay-app.netlify.app/'
 ];
 
 app.use(cors({
