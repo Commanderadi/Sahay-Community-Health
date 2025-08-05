@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
+// API base URL - supports both Netlify functions and Render backend
+const API_BASE_URL = process.env.REACT_APP_API_URL || 
+  (process.env.NODE_ENV === 'production' 
+    ? (process.env.REACT_APP_USE_RENDER === 'true' 
+        ? 'https://sahay-backend.onrender.com' 
+        : '/.netlify/functions/api')
+    : 'http://localhost:5000');
+
 function AddClinic({ onClinicAdded, setMessage }) {
   const [form, setForm] = useState({ name: '', city: '', contact: '', addedBy: '' });
 
@@ -13,7 +21,10 @@ function AddClinic({ onClinicAdded, setMessage }) {
       return;
     }
 
-    axios.post('http://localhost:5000/api/clinics/add', form)
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+
+    axios.post(`${API_BASE_URL}/api/clinics/add`, form, { headers })
       .then(() => {
         setMessage("✅ Clinic added successfully.");
         setForm({ name: '', city: '', contact: '', addedBy: '' });
@@ -24,12 +35,62 @@ function AddClinic({ onClinicAdded, setMessage }) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <h3>Add Clinic</h3>
-      <input name="name" placeholder="Clinic Name" value={form.name} onChange={handleChange} />
-      <input name="city" placeholder="City" value={form.city} onChange={handleChange} />
-      <input name="contact" placeholder="Contact" value={form.contact} onChange={handleChange} />
-      <input name="addedBy" placeholder="Added By" value={form.addedBy} onChange={handleChange} />
-      <button type="submit">Add Clinic</button>
+      <h3>➕ Add New Clinic</h3>
+      
+      <div className="form-group">
+        <label htmlFor="name">🏥 Clinic Name *</label>
+        <input
+          id="name"
+          name="name"
+          type="text"
+          placeholder="Enter clinic name"
+          value={form.name}
+          onChange={handleChange}
+          required
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="city">📍 City *</label>
+        <input
+          id="city"
+          name="city"
+          type="text"
+          placeholder="Enter city name"
+          value={form.city}
+          onChange={handleChange}
+          required
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="contact">📞 Contact Information *</label>
+        <input
+          id="contact"
+          name="contact"
+          type="text"
+          placeholder="Phone number or email"
+          value={form.contact}
+          onChange={handleChange}
+          required
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="addedBy">👤 Added By</label>
+        <input
+          id="addedBy"
+          name="addedBy"
+          type="text"
+          placeholder="Your name or organization"
+          value={form.addedBy}
+          onChange={handleChange}
+        />
+      </div>
+
+      <button type="submit">
+        ➕ Add Clinic
+      </button>
     </form>
   );
 }

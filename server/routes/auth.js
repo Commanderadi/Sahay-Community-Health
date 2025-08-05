@@ -2,6 +2,27 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const path = require('path');
+const fs = require('fs');
+
+// Load JWT secret manually if not available
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  const envPath = path.join(__dirname, '..', '.env');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const jwtLine = envContent.split('\n').find(line => line.startsWith('JWT_SECRET='));
+    if (jwtLine) {
+      JWT_SECRET = jwtLine.split('=')[1].trim();
+    }
+  }
+}
+
+// Fallback JWT secret if still not available
+if (!JWT_SECRET) {
+  JWT_SECRET = 'sahay_jwt_secret_key_2024';
+  console.log('⚠️ Using fallback JWT secret');
+}
 
 const router = express.Router();
 
@@ -52,7 +73,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { userId: user._id, role: user.role },
-      process.env.JWT_SECRET,
+      JWT_SECRET || 'sahay_jwt_secret_key_2024',
       { expiresIn: '1h' }
     );
 

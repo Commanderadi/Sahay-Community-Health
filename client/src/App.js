@@ -4,7 +4,16 @@ import Login from './components/Login';
 import Register from './components/Register';
 import AddClinic from './components/AddClinic';
 import ClinicList from './components/ClinicList';
+import ConnectivityTest from './components/ConnectivityTest';
 import './index.css';
+
+// API base URL - supports both Netlify functions and Render backend
+const API_BASE_URL = process.env.REACT_APP_API_URL || 
+  (process.env.NODE_ENV === 'production' 
+    ? (process.env.REACT_APP_USE_RENDER === 'true' 
+        ? 'https://sahay-backend.onrender.com' 
+        : '/.netlify/functions/api')
+    : 'http://localhost:5000');
 
 function App() {
   const [user, setUser] = useState(null);
@@ -16,7 +25,7 @@ function App() {
 
   const fetchClinics = () => {
     setLoading(true);
-    axios.get('http://localhost:5000/api/clinics')
+    axios.get(`${API_BASE_URL}/api/clinics`)
       .then((res) => setClinics(res.data))
       .catch(() => setMessage("❌ Failed to fetch clinics."))
       .finally(() => setLoading(false));
@@ -34,7 +43,7 @@ function App() {
   const handleSearch = () => {
     if (!searchQuery) return fetchClinics();
     setLoading(true);
-    axios.get(`http://localhost:5000/api/clinics/search?query=${searchQuery}`)
+    axios.get(`${API_BASE_URL}/api/clinics/search?query=${searchQuery}`)
       .then(res => setClinics(res.data))
       .catch(() => setMessage("❌ No results found."))
       .finally(() => setLoading(false));
@@ -50,20 +59,37 @@ function App() {
     <div className="container">
       <h1>🩺 Sahay – Community Health</h1>
 
-      {message && <div className="message">{message}</div>}
+      {message && (
+        <div className={`message ${message.includes('✅') ? 'success' : 'error'}`}>
+          {message}
+        </div>
+      )}
 
       {user ? (
         <>
-          <p>Logged in as: <strong>{user.role}</strong></p>
-          <button onClick={logout}>Logout</button>
+          <div className="user-info">
+            <div className="user-details">
+              <span>👤 Logged in as:</span>
+              <span className="role-badge">{user.role}</span>
+            </div>
+            <button className="logout-btn" onClick={logout}>
+              🚪 Logout
+            </button>
+          </div>
+
+          {/* Connectivity Test - Shows backend-frontend connection */}
+          <ConnectivityTest />
 
           <div className="search-bar">
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by city or name"
+              placeholder="🔍 Search by city or clinic name..."
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
-            <button onClick={handleSearch}>Search</button>
+            <button onClick={handleSearch}>
+              🔍 Search
+            </button>
           </div>
 
           {user.role !== 'Visitor' && (
@@ -71,7 +97,9 @@ function App() {
           )}
 
           {loading ? (
-            <p>Loading clinics...</p>
+            <div className="loading">
+              Loading clinics...
+            </div>
           ) : (
             <ClinicList clinics={clinics} onDelete={fetchClinics} role={user.role} setMessage={setMessage} />
           )}
@@ -81,12 +109,18 @@ function App() {
           {showRegister ? (
             <>
               <Register onRegistered={() => setShowRegister(false)} />
-              <p>Already have an account? <button onClick={() => setShowRegister(false)}>Login here</button></p>
+              <div className="toggle-form">
+                <p>Already have an account?</p>
+                <button onClick={() => setShowRegister(false)}>Login here</button>
+              </div>
             </>
           ) : (
             <>
               <Login onLogin={setUser} />
-              <p>Don’t have an account? <button onClick={() => setShowRegister(true)}>Register here</button></p>
+              <div className="toggle-form">
+                <p>Don't have an account?</p>
+                <button onClick={() => setShowRegister(true)}>Register here</button>
+              </div>
             </>
           )}
         </>
