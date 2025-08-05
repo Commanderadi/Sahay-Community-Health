@@ -49,7 +49,11 @@ function ClinicList({ clinics, onDelete, role, setMessage }) {
           </div>
           {role !== 'Visitor' && (
             <div className="clinic-actions">
-              <button className="danger" onClick={() => handleDelete(clinic._id)}>
+              <button 
+                className="danger" 
+                onClick={() => handleDelete(clinic._id)}
+                aria-label={`Delete clinic: ${clinic.name}`}
+              >
                 🗑️ Delete Clinic
               </button>
             </div>

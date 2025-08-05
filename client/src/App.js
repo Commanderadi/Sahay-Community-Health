@@ -70,9 +70,13 @@ function App() {
           <div className="user-info">
             <div className="user-details">
               <span>👤 Logged in as:</span>
-              <span className="role-badge">{user.role}</span>
+              <span className="role-badge" aria-label={`User role: ${user.role}`}>{user.role}</span>
             </div>
-            <button className="logout-btn" onClick={logout}>
+            <button 
+              className="logout-btn" 
+              onClick={logout}
+              aria-label="Logout from your account"
+            >
               🚪 Logout
             </button>
           </div>
@@ -86,8 +90,12 @@ function App() {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="🔍 Search by city or clinic name..."
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              aria-label="Search clinics by city or name"
             />
-            <button onClick={handleSearch}>
+            <button 
+              onClick={handleSearch}
+              aria-label="Search for clinics"
+            >
               🔍 Search
             </button>
           </div>
@@ -111,7 +119,12 @@ function App() {
               <Register onRegistered={() => setShowRegister(false)} />
               <div className="toggle-form">
                 <p>Already have an account?</p>
-                <button onClick={() => setShowRegister(false)}>Login here</button>
+                <button 
+                  onClick={() => setShowRegister(false)}
+                  aria-label="Switch to login form"
+                >
+                  Login here
+                </button>
               </div>
             </>
           ) : (
@@ -119,7 +132,12 @@ function App() {
               <Login onLogin={setUser} />
               <div className="toggle-form">
                 <p>Don't have an account?</p>
-                <button onClick={() => setShowRegister(true)}>Register here</button>
+                <button 
+                  onClick={() => setShowRegister(true)}
+                  aria-label="Switch to registration form"
+                >
+                  Register here
+                </button>
               </div>
             </>
           )}

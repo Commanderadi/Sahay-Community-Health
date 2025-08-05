@@ -48,7 +48,10 @@ function Login({ onLogin }) {
           value={formData.email}
           onChange={handleChange}
           required
+          autoComplete="email"
+          aria-describedby="email-help"
         />
+        <div id="email-help" className="sr-only">Enter your registered email address</div>
       </div>
 
       <div className="form-group">
@@ -61,10 +64,17 @@ function Login({ onLogin }) {
           value={formData.password}
           onChange={handleChange}
           required
+          autoComplete="current-password"
+          aria-describedby="password-help"
         />
+        <div id="password-help" className="sr-only">Enter your account password</div>
       </div>
 
-      <button type="submit" disabled={loading}>
+      <button 
+        type="submit" 
+        disabled={loading}
+        aria-label={loading ? 'Logging in, please wait' : 'Login to your account'}
+      >
         {loading ? '🔄 Logging in...' : '🔐 Login'}
       </button>
     </form>

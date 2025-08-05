@@ -47,7 +47,10 @@ function AddClinic({ onClinicAdded, setMessage }) {
           value={form.name}
           onChange={handleChange}
           required
+          autoComplete="organization"
+          aria-describedby="name-help"
         />
+        <div id="name-help" className="sr-only">Enter the name of the healthcare clinic</div>
       </div>
 
       <div className="form-group">
@@ -60,7 +63,10 @@ function AddClinic({ onClinicAdded, setMessage }) {
           value={form.city}
           onChange={handleChange}
           required
+          autoComplete="address-level2"
+          aria-describedby="city-help"
         />
+        <div id="city-help" className="sr-only">Enter the city where the clinic is located</div>
       </div>
 
       <div className="form-group">
@@ -73,7 +79,10 @@ function AddClinic({ onClinicAdded, setMessage }) {
           value={form.contact}
           onChange={handleChange}
           required
+          autoComplete="tel"
+          aria-describedby="contact-help"
         />
+        <div id="contact-help" className="sr-only">Enter phone number or email for clinic contact</div>
       </div>
 
       <div className="form-group">
@@ -85,10 +94,16 @@ function AddClinic({ onClinicAdded, setMessage }) {
           placeholder="Your name or organization"
           value={form.addedBy}
           onChange={handleChange}
+          autoComplete="name"
+          aria-describedby="addedBy-help"
         />
+        <div id="addedBy-help" className="sr-only">Enter your name or organization name</div>
       </div>
 
-      <button type="submit">
+      <button 
+        type="submit"
+        aria-label="Add new clinic to the database"
+      >
         ➕ Add Clinic
       </button>
     </form>

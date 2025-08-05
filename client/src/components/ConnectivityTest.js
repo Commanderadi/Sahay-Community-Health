@@ -75,7 +75,11 @@ function ConnectivityTest() {
         </div>
       )}
 
-      <button onClick={testConnectivity} className="test-button">
+      <button 
+        onClick={testConnectivity} 
+        className="test-button"
+        aria-label="Re-run connectivity test"
+      >
         🔄 Re-run Test
       </button>
     </div>

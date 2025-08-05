@@ -54,7 +54,10 @@ function Register({ onRegistered }) {
           value={formData.email}
           onChange={handleChange}
           required
+          autoComplete="email"
+          aria-describedby="email-help"
         />
+        <div id="email-help" className="sr-only">Enter your email address for account registration</div>
       </div>
 
       <div className="form-group">
@@ -67,7 +70,10 @@ function Register({ onRegistered }) {
           value={formData.password}
           onChange={handleChange}
           required
+          autoComplete="new-password"
+          aria-describedby="password-help"
         />
+        <div id="password-help" className="sr-only">Create a strong password for your account</div>
       </div>
 
       <div className="form-group">
@@ -77,13 +83,19 @@ function Register({ onRegistered }) {
           name="role"
           value={formData.role}
           onChange={handleChange}
+          aria-describedby="role-help"
         >
           <option value="NGO">🏥 NGO (Non-Governmental Organization)</option>
           <option value="Admin">👨‍💼 Admin (Administrator)</option>
         </select>
+        <div id="role-help" className="sr-only">Select your role in the healthcare system</div>
       </div>
 
-      <button type="submit" disabled={loading}>
+      <button 
+        type="submit" 
+        disabled={loading}
+        aria-label={loading ? 'Creating account, please wait' : 'Create new account'}
+      >
         {loading ? '🔄 Creating account...' : '📝 Create Account'}
       </button>
     </form>
