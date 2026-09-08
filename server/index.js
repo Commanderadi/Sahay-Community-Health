@@ -9,6 +9,7 @@ const path = require('path');
 
 const clinicRoutes = require('./routes/clinic');
 const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
 
 dotenv.config({ path: path.join(__dirname, '.env') });
 
@@ -92,6 +93,7 @@ app.get('/api/test', (req, res) => {
 
 app.use('/api/clinics', clinicRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // 404 for unknown API routes.
 app.use((req, res) => {
