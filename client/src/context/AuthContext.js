@@ -7,9 +7,20 @@ import {
   useRef,
   useState,
 } from 'react';
-import { isExpired, msUntilExpiry } from '../lib/token';
+import { decodeToken, isExpired, msUntilExpiry } from '../lib/token';
 
 const AuthContext = createContext(null);
+
+function buildUser(token, role, email) {
+  const payload = decodeToken(token) || {};
+  return {
+    token,
+    userId: payload.userId || null,
+    role: role || payload.role || null,
+    email: email || payload.email || null,
+    isAdmin: (role || payload.role) === 'Admin',
+  };
+}
 
 function readStored() {
   try {
@@ -17,7 +28,7 @@ function readStored() {
     const role = localStorage.getItem('role');
     const email = localStorage.getItem('email');
     if (!token || isExpired(token)) return null;
-    return { token, role: role || null, email: email || null };
+    return buildUser(token, role, email);
   } catch {
     return null;
   }
@@ -53,7 +64,7 @@ export function AuthProvider({ children, onExpire }) {
     } catch {
       /* ignore */
     }
-    setUser({ token, role: role || null, email: email || null });
+    setUser(buildUser(token, role, email));
   }, []);
 
   // Auto-logout the moment the current token expires.

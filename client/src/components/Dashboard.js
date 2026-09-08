@@ -1,24 +1,34 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Activity,
   Building2,
+  Download,
+  LayoutGrid,
   LogOut,
+  Map as MapIcon,
   Plus,
   Search,
+  Shield,
   SlidersHorizontal,
   X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import useClinics, { SORTS } from '../hooks/useClinics';
+import { clinicsToCsv, downloadCsv } from '../lib/csv';
 import Button from './ui/Button';
 import { Select } from './ui/Field';
 import { useConfirm } from './ui/ConfirmDialog';
 import ClinicCard from './ClinicCard';
-import AddClinicModal from './AddClinicModal';
+import ClinicFormModal from './ClinicFormModal';
+import ClinicDetail from './ClinicDetail';
+import AdminPanel from './AdminPanel';
 import StatusPill from './StatusPill';
 import ThemeToggle from './ThemeToggle';
+
+// Leaflet / react-leaflet are ESM-only and heavy — load them on demand.
+const MapView = lazy(() => import('./MapView'));
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -36,20 +46,22 @@ export default function Dashboard() {
     setCity,
     sort,
     setSort,
+    mineOnly,
+    setMineOnly,
+    canManage,
     addClinic,
     updateClinic,
     deleteClinic,
   } = useClinics();
 
-  const [showAdd, setShowAdd] = useState(false);
+  const [view, setView] = useState('grid'); // 'grid' | 'map'
   const [showFilters, setShowFilters] = useState(false);
+  const [formFor, setFormFor] = useState(undefined); // undefined=closed, null=add, clinic=edit
+  const [detailFor, setDetailFor] = useState(null);
+  const [showAdmin, setShowAdmin] = useState(false);
 
-  const activeFilters = (city !== 'all' ? 1 : 0) + (sort !== 'newest' ? 1 : 0);
-
-  const handleSave = async (id, payload) => {
-    await updateClinic(id, payload);
-    toast.success('Clinic updated.');
-  };
+  const activeFilters =
+    (city !== 'all' ? 1 : 0) + (sort !== 'newest' ? 1 : 0) + (mineOnly ? 1 : 0);
 
   const handleDelete = async (clinic) => {
     const ok = await confirm({
@@ -62,15 +74,33 @@ export default function Dashboard() {
     try {
       await deleteClinic(clinic._id);
       toast.success(`${clinic.name} deleted.`);
+      setDetailFor(null);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to delete clinic.');
     }
   };
 
+  const submitForm = async (payload) => {
+    if (formFor) {
+      await updateClinic(formFor._id, payload);
+    } else {
+      await addClinic(payload);
+    }
+  };
+
+  const exportCsv = () => {
+    downloadCsv(`sahay-clinics-${new Date().toISOString().slice(0, 10)}.csv`, clinicsToCsv(visible));
+    toast.success(`Exported ${visible.length} clinics.`);
+  };
+
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
+      <motion.header
+        initial={{ y: -64, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80"
+      >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm">
@@ -85,8 +115,13 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <StatusPill />
             <ThemeToggle />
+            {user?.isAdmin && (
+              <Button variant="ghost" size="icon" onClick={() => setShowAdmin(true)} aria-label="Manage users">
+                <Shield className="h-4 w-4" />
+              </Button>
+            )}
             <div className="hidden items-center gap-2 rounded-xl border border-slate-200 py-1 pl-3 pr-1 dark:border-slate-800 sm:flex">
-              <span className="text-xs text-slate-500 dark:text-slate-400">
+              <span className="max-w-[12rem] truncate text-xs text-slate-500 dark:text-slate-400">
                 {user?.email || 'Signed in'}
               </span>
               <span className="rounded-lg bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-400">
@@ -98,10 +133,14 @@ export default function Dashboard() {
             </Button>
           </div>
         </div>
-      </header>
+      </motion.header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-        {/* Title row */}
+      <motion.main
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.15, ease: 'easeOut' }}
+        className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8"
+      >
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
@@ -111,15 +150,19 @@ export default function Dashboard() {
               {loading
                 ? 'Loading…'
                 : `${visible.length} of ${total} ${total === 1 ? 'clinic' : 'clinics'}`}
-              {!loading && (search || city !== 'all') && ' matching your filters'}
+              {!loading && (search || activeFilters > 0) && ' matching your filters'}
             </p>
           </div>
-          <Button onClick={() => setShowAdd(true)}>
-            <Plus className="h-4 w-4" /> Add clinic
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={exportCsv} disabled={loading || visible.length === 0}>
+              <Download className="h-4 w-4" /> Export
+            </Button>
+            <Button onClick={() => setFormFor(null)}>
+              <Plus className="h-4 w-4" /> Add clinic
+            </Button>
+          </div>
         </div>
 
-        {/* Controls */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -140,11 +183,33 @@ export default function Dashboard() {
               </button>
             )}
           </div>
-          <Button
-            variant="secondary"
-            onClick={() => setShowFilters((s) => !s)}
-            aria-expanded={showFilters}
-          >
+
+          <div className="flex items-center gap-1 rounded-xl border border-slate-200 p-1 dark:border-slate-800">
+            <button
+              onClick={() => setView('grid')}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition ${
+                view === 'grid'
+                  ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+              aria-pressed={view === 'grid'}
+            >
+              <LayoutGrid className="h-4 w-4" /> Grid
+            </button>
+            <button
+              onClick={() => setView('map')}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition ${
+                view === 'map'
+                  ? 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+              aria-pressed={view === 'map'}
+            >
+              <MapIcon className="h-4 w-4" /> Map
+            </button>
+          </div>
+
+          <Button variant="secondary" onClick={() => setShowFilters((s) => !s)} aria-expanded={showFilters}>
             <SlidersHorizontal className="h-4 w-4" />
             Filters
             {activeFilters > 0 && (
@@ -164,7 +229,7 @@ export default function Dashboard() {
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="card mb-6 grid gap-4 p-4 sm:grid-cols-2">
+              <div className="card mb-6 grid gap-4 p-4 sm:grid-cols-3">
                 <Select label="Filter by city" value={city} onChange={(e) => setCity(e.target.value)}>
                   <option value="all">All cities</option>
                   {cities.map((c) => (
@@ -180,12 +245,22 @@ export default function Dashboard() {
                     </option>
                   ))}
                 </Select>
+                <label className="flex items-end pb-2.5">
+                  <span className="flex cursor-pointer items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={mineOnly}
+                      onChange={(e) => setMineOnly(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600 dark:bg-slate-800"
+                    />
+                    Only clinics I added
+                  </span>
+                </label>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Content */}
         {error ? (
           <div className="card flex flex-col items-center gap-3 p-10 text-center">
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -199,6 +274,14 @@ export default function Dashboard() {
               <div key={i} className="card h-48 animate-pulse bg-slate-100 dark:bg-slate-900" />
             ))}
           </div>
+        ) : view === 'map' ? (
+          <Suspense
+            fallback={
+              <div className="card h-[65vh] animate-pulse bg-slate-100 dark:bg-slate-900" />
+            }
+          >
+            <MapView clinics={visible} onOpen={setDetailFor} />
+          </Suspense>
         ) : visible.length === 0 ? (
           <div className="card flex flex-col items-center gap-2 p-12 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800">
@@ -213,7 +296,7 @@ export default function Dashboard() {
                 : 'Try a different search term or clear your filters.'}
             </p>
             {total === 0 && (
-              <Button className="mt-2" onClick={() => setShowAdd(true)}>
+              <Button className="mt-2" onClick={() => setFormFor(null)}>
                 <Plus className="h-4 w-4" /> Add clinic
               </Button>
             )}
@@ -221,20 +304,39 @@ export default function Dashboard() {
         ) : (
           <motion.div layout className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <AnimatePresence mode="popLayout">
-              {visible.map((clinic) => (
+              {visible.map((clinic, i) => (
                 <ClinicCard
                   key={clinic._id}
+                  index={i}
                   clinic={clinic}
-                  onSave={handleSave}
+                  canManage={canManage(clinic)}
+                  onOpen={setDetailFor}
+                  onEdit={setFormFor}
                   onDelete={handleDelete}
                 />
               ))}
             </AnimatePresence>
           </motion.div>
         )}
-      </main>
+      </motion.main>
 
-      <AddClinicModal open={showAdd} onClose={() => setShowAdd(false)} onAdd={addClinic} />
+      <ClinicFormModal
+        open={formFor !== undefined}
+        clinic={formFor || null}
+        onClose={() => setFormFor(undefined)}
+        onSubmit={submitForm}
+      />
+      <ClinicDetail
+        clinic={detailFor}
+        canManage={detailFor ? canManage(detailFor) : false}
+        onClose={() => setDetailFor(null)}
+        onEdit={(c) => {
+          setDetailFor(null);
+          setFormFor(c);
+        }}
+        onDelete={handleDelete}
+      />
+      <AdminPanel open={showAdmin} onClose={() => setShowAdmin(false)} />
       {confirmElement}
     </div>
   );

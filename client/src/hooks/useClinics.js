@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../api';
 import useDebounced from './useDebounced';
+import { useAuth } from '../context/AuthContext';
 
 const SORTS = {
   newest: { label: 'Newest first', fn: (a, b) => new Date(b.createdAt) - new Date(a.createdAt) },
@@ -17,6 +18,7 @@ function errMessage(err, fallback) {
 }
 
 export default function useClinics() {
+  const { user } = useAuth();
   const [all, setAll] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,6 +29,18 @@ export default function useClinics() {
   const debouncedSearch = useDebounced(search, 250);
   const [city, setCity] = useState('all');
   const [sort, setSort] = useState('newest');
+  const [mineOnly, setMineOnly] = useState(false);
+
+  // Whether the current user may edit/delete a given clinic.
+  const canManage = useCallback(
+    (clinic) => {
+      if (!user) return false;
+      if (user.isAdmin) return true;
+      if (!clinic.owner) return true; // legacy, unowned
+      return String(clinic.owner) === String(user.userId);
+    },
+    [user],
+  );
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -81,9 +95,12 @@ export default function useClinics() {
     if (city !== 'all') {
       list = list.filter((c) => c.city === city);
     }
+    if (mineOnly && user) {
+      list = list.filter((c) => String(c.owner) === String(user.userId));
+    }
     const sorter = (SORTS[sort] || SORTS.newest).fn;
     return [...list].sort(sorter);
-  }, [all, debouncedSearch, city, sort]);
+  }, [all, debouncedSearch, city, sort, mineOnly, user]);
 
   return {
     all,
@@ -99,6 +116,9 @@ export default function useClinics() {
     setCity,
     sort,
     setSort,
+    mineOnly,
+    setMineOnly,
+    canManage,
     refetch: fetchAll,
     addClinic,
     updateClinic,
