@@ -1,171 +1,103 @@
-# 🩺 Sahay - Community Health Clinic Management System
+# 🩺 Sahay – Community Health Clinic Directory
 
-A full-stack web application for managing community health clinics, built with React.js, Node.js, Express.js, and MongoDB.
+A full-stack web app for listing and managing community health clinics.
+Built with React, Node.js, Express, and MongoDB.
 
-## 🚀 Features
+## Features
 
-- **User Authentication**: JWT-based login/register system
-- **Role-Based Access**: NGO, Admin, and Visitor roles
-- **Clinic Management**: Add, view, search, and delete clinics
-- **Search Functionality**: Search clinics by name or city
-- **Responsive Design**: Modern UI with Tailwind CSS
-- **Security**: Rate limiting, helmet middleware, bcrypt password hashing
+- JWT-based authentication (register / login)
+- Roles: **NGO** and **Admin**
+- Add, view, search, update, and delete clinics
+- Search clinics by name or city
+- Live backend/database connectivity check on the dashboard
 
-## 🛠️ Tech Stack
+## Tech stack
 
-### Frontend
-- React.js 19
-- Axios for API calls
-- Tailwind CSS for styling
-- React Router for navigation
+**Frontend:** React 18 (Create React App), Axios
+**Backend:** Node.js, Express, Mongoose, JWT, bcryptjs, Helmet, express-rate-limit
+**Database:** MongoDB (Atlas or local)
 
-### Backend
-- Node.js with Express.js
-- MongoDB with Mongoose ODM
-- JWT for authentication
-- bcryptjs for password hashing
-- Helmet for security headers
-- Express Rate Limit for API protection
+## Project structure
 
-## 📋 Prerequisites
+```
+sahay/
+├── client/                 # React frontend
+│   ├── src/
+│   │   ├── api.js          # shared Axios instance (base URL + auth header)
+│   │   ├── App.js
+│   │   └── components/
+│   └── netlify.toml        # Netlify build config
+├── server/                 # Express API
+│   ├── index.js
+│   ├── routes/             # auth.js, clinic.js
+│   ├── models/             # User.js, Clinic.js
+│   ├── middleware/auth.js  # JWT verification
+│   ├── .env.example
+│   └── render.yaml         # Render deploy config
+└── package.json            # root dev scripts (runs client + server together)
+```
 
-- Node.js (v14 or higher)
-- MongoDB (local installation or MongoDB Atlas)
-- npm or yarn package manager
+## Local setup
 
-## 🔧 Installation & Setup
+### 1. Install dependencies
 
-### 1. Clone the Repository
 ```bash
-git clone <repository-url>
-cd sahay
+npm run install-all
 ```
 
-### 2. Install Dependencies
+### 2. Configure the backend
 
-#### Frontend Dependencies
 ```bash
-cd client
-npm install
+cp server/.env.example server/.env
 ```
 
-#### Backend Dependencies
+Edit `server/.env` and set:
+
+| Variable | Description |
+|----------|-------------|
+| `MONGO_URI` | MongoDB connection string |
+| `JWT_SECRET` | Long random string. Generate: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
+| `PORT` | API port (default `5000`) |
+| `ALLOWED_ORIGINS` | Comma-separated browser origins for CORS (optional locally) |
+
+The server **exits on startup** if `MONGO_URI` or `JWT_SECRET` is missing.
+
+### 3. Configure the frontend (optional locally)
+
+The client defaults to `http://localhost:5000`. To point elsewhere, create
+`client/.env`:
+
+```
+REACT_APP_API_URL=https://your-backend-url
+```
+
+### 4. Run
+
 ```bash
-cd ../server
-npm install
+npm run dev
 ```
 
-### 3. Environment Configuration
+- Frontend: http://localhost:3000
+- Backend:  http://localhost:5000
 
-Create a `.env` file in the `server` directory:
-```env
-MONGO_URI=mongodb://localhost:27017/sahay
-JWT_SECRET=your_secret_key_here
-PORT=5000
-```
+## API
 
-**Note**: Replace `your_secret_key_here` with a strong secret key for JWT tokens.
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/auth/register` | – | Register (`email`, `password`, `role`) |
+| POST | `/api/auth/login` | – | Login → `{ token, role }` |
+| GET | `/api/clinics` | – | List all clinics |
+| GET | `/api/clinics/search?query=` | – | Search by name or city |
+| POST | `/api/clinics/add` | Bearer | Add a clinic |
+| PUT | `/api/clinics/:id` | Bearer | Update a clinic |
+| DELETE | `/api/clinics/:id` | Bearer | Delete a clinic |
+| GET | `/api/test` | – | Health check |
 
-### 4. Database Setup
+## Deployment
 
-Make sure MongoDB is running on your system. If using MongoDB Atlas, replace the MONGO_URI with your connection string.
+See [DEPLOYMENT.md](DEPLOYMENT.md). Frontend deploys to Netlify, backend to Render,
+database on MongoDB Atlas.
 
-### 5. Start the Application
+## License
 
-#### Start the Backend Server
-```bash
-cd server
-npm start
-```
-The server will run on `http://localhost:5000`
-
-#### Start the Frontend Application
-```bash
-cd client
-npm start
-```
-The React app will run on `http://localhost:3000`
-
-## 👥 User Roles
-
-### NGO
-- Can add new clinics
-- Can delete clinics
-- Can view all clinics
-- Can search clinics
-
-### Admin
-- Same permissions as NGO
-- Additional administrative privileges (future features)
-
-### Visitor
-- Can view all clinics
-- Can search clinics
-- Cannot add or delete clinics
-
-## 🔐 API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
-
-### Clinics
-- `GET /api/clinics` - Get all clinics
-- `POST /api/clinics/add` - Add new clinic (protected)
-- `GET /api/clinics/search?query=<search_term>` - Search clinics
-- `PUT /api/clinics/:id` - Update clinic (protected)
-- `DELETE /api/clinics/:id` - Delete clinic (protected)
-
-## 🎨 UI Features
-
-- Clean, modern interface
-- Responsive design
-- Real-time search functionality
-- Success/error message notifications
-- Role-based UI elements
-
-## 🔒 Security Features
-
-- JWT token authentication
-- Password hashing with bcrypt
-- Rate limiting on API endpoints
-- Helmet security headers
-- CORS configuration
-- Input validation
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **MongoDB Connection Error**
-   - Ensure MongoDB is running
-   - Check your MONGO_URI in the .env file
-   - Verify network connectivity if using MongoDB Atlas
-
-2. **JWT Token Errors**
-   - Check that JWT_SECRET is set in .env
-   - Ensure tokens are being sent in Authorization headers
-
-3. **CORS Errors**
-   - Verify the frontend is running on localhost:3000
-   - Check CORS configuration in server/index.js
-
-4. **Port Already in Use**
-   - Change the PORT in .env file
-   - Kill processes using the default ports
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## 📞 Support
-
-For support and questions, please open an issue in the repository. 
+MIT
