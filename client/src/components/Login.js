@@ -1,17 +1,10 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-
-// API base URL - supports both Netlify functions and Render backend
-const API_BASE_URL = process.env.REACT_APP_API_URL || 
-  (process.env.NODE_ENV === 'production' 
-    ? (process.env.REACT_APP_USE_RENDER === 'true' 
-        ? 'https://sahay-backend.onrender.com' 
-        : '/.netlify/functions/api')
-    : 'http://localhost:5000');
+import api from '../api';
 
 function Login({ onLogin }) {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -20,15 +13,16 @@ function Login({ onLogin }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+    setError('');
+
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/auth/login`, formData);
+      const res = await api.post('/api/auth/login', formData);
       const { token, role } = res.data;
       localStorage.setItem('token', token);
       localStorage.setItem('role', role);
       onLogin({ token, role });
     } catch (err) {
-      alert('❌ Invalid credentials. Please try again.');
+      setError(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -37,7 +31,9 @@ function Login({ onLogin }) {
   return (
     <form onSubmit={handleSubmit}>
       <h2>🔐 Login to Sahay</h2>
-      
+
+      {error && <div className="message error">❌ {error}</div>}
+
       <div className="form-group">
         <label htmlFor="email">📧 Email Address</label>
         <input
@@ -49,9 +45,7 @@ function Login({ onLogin }) {
           onChange={handleChange}
           required
           autoComplete="email"
-          aria-describedby="email-help"
         />
-        <div id="email-help" className="sr-only">Enter your registered email address</div>
       </div>
 
       <div className="form-group">
@@ -65,13 +59,11 @@ function Login({ onLogin }) {
           onChange={handleChange}
           required
           autoComplete="current-password"
-          aria-describedby="password-help"
         />
-        <div id="password-help" className="sr-only">Enter your account password</div>
       </div>
 
-      <button 
-        type="submit" 
+      <button
+        type="submit"
         disabled={loading}
         aria-label={loading ? 'Logging in, please wait' : 'Login to your account'}
       >
