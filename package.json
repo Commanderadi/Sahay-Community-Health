@@ -1,27 +1,27 @@
 {
   "name": "sahay",
   "version": "1.0.0",
-  "description": "Community Health Clinic Management System",
-  "main": "index.js",
+  "description": "Community Health Clinic Directory",
   "scripts": {
-    "install-all": "npm install && cd client && npm install && cd ../server && npm install",
-    "start": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "cd server && npm start",
-    "client": "cd client && npm start",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "cd client && npm run build"
+    "install-all": "npm install && npm --prefix client install && npm --prefix server install",
+    "dev": "concurrently -n server,client -c blue,green \"npm --prefix server run dev\" \"npm --prefix client start\"",
+    "start": "npm --prefix server start",
+    "client": "npm --prefix client start",
+    "server": "npm --prefix server start",
+    "build": "npm --prefix client run build",
+    "test": "npm --prefix client test -- --watchAll=false"
   },
   "keywords": [
     "health",
     "clinic",
-    "management",
+    "directory",
     "react",
     "nodejs",
     "mongodb"
   ],
-  "author": "Sahay Team",
+  "author": "Aditya Singh",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
   }
-} 
+}

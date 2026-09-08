@@ -1,19 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from './api';
 import Login from './components/Login';
 import Register from './components/Register';
 import AddClinic from './components/AddClinic';
 import ClinicList from './components/ClinicList';
 import ConnectivityTest from './components/ConnectivityTest';
 import './index.css';
-
-// API base URL - supports both Netlify functions and Render backend
-const API_BASE_URL = process.env.REACT_APP_API_URL || 
-  (process.env.NODE_ENV === 'production' 
-    ? (process.env.REACT_APP_USE_RENDER === 'true' 
-        ? 'https://sahay-backend.onrender.com' 
-        : '/.netlify/functions/api')
-    : 'http://localhost:5000');
 
 function App() {
   const [user, setUser] = useState(null);
@@ -25,9 +17,9 @@ function App() {
 
   const fetchClinics = () => {
     setLoading(true);
-    axios.get(`${API_BASE_URL}/api/clinics`)
+    api.get('/api/clinics')
       .then((res) => setClinics(res.data))
-      .catch(() => setMessage("❌ Failed to fetch clinics."))
+      .catch(() => setMessage('❌ Failed to fetch clinics.'))
       .finally(() => setLoading(false));
   };
 
@@ -41,18 +33,18 @@ function App() {
   }, []);
 
   const handleSearch = () => {
-    if (!searchQuery) return fetchClinics();
+    if (!searchQuery.trim()) return fetchClinics();
     setLoading(true);
-    axios.get(`${API_BASE_URL}/api/clinics/search?query=${searchQuery}`)
-      .then(res => setClinics(res.data))
-      .catch(() => setMessage("❌ No results found."))
+    api.get('/api/clinics/search', { params: { query: searchQuery.trim() } })
+      .then((res) => setClinics(res.data))
+      .catch(() => setMessage('❌ No results found.'))
       .finally(() => setLoading(false));
   };
 
   const logout = () => {
     localStorage.clear();
     setUser(null);
-    setMessage("✅ Logged out successfully");
+    setMessage('✅ Logged out successfully');
   };
 
   return (
@@ -72,8 +64,8 @@ function App() {
               <span>👤 Logged in as:</span>
               <span className="role-badge" aria-label={`User role: ${user.role}`}>{user.role}</span>
             </div>
-            <button 
-              className="logout-btn" 
+            <button
+              className="logout-btn"
               onClick={logout}
               aria-label="Logout from your account"
             >
@@ -81,7 +73,6 @@ function App() {
             </button>
           </div>
 
-          {/* Connectivity Test - Shows backend-frontend connection */}
           <ConnectivityTest />
 
           <div className="search-bar">
@@ -89,27 +80,25 @@ function App() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="🔍 Search by city or clinic name..."
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               aria-label="Search clinics by city or name"
             />
-            <button 
-              onClick={handleSearch}
-              aria-label="Search for clinics"
-            >
+            <button onClick={handleSearch} aria-label="Search for clinics">
               🔍 Search
             </button>
           </div>
 
-          {user.role !== 'Visitor' && (
-            <AddClinic onClinicAdded={fetchClinics} setMessage={setMessage} />
-          )}
+          <AddClinic onClinicAdded={fetchClinics} setMessage={setMessage} />
 
           {loading ? (
-            <div className="loading">
-              Loading clinics...
-            </div>
+            <div className="loading">Loading clinics...</div>
           ) : (
-            <ClinicList clinics={clinics} onDelete={fetchClinics} role={user.role} setMessage={setMessage} />
+            <ClinicList
+              clinics={clinics}
+              onDelete={fetchClinics}
+              role={user.role}
+              setMessage={setMessage}
+            />
           )}
         </>
       ) : (
@@ -119,7 +108,7 @@ function App() {
               <Register onRegistered={() => setShowRegister(false)} />
               <div className="toggle-form">
                 <p>Already have an account?</p>
-                <button 
+                <button
                   onClick={() => setShowRegister(false)}
                   aria-label="Switch to login form"
                 >
@@ -132,7 +121,7 @@ function App() {
               <Login onLogin={setUser} />
               <div className="toggle-form">
                 <p>Don't have an account?</p>
-                <button 
+                <button
                   onClick={() => setShowRegister(true)}
                   aria-label="Switch to registration form"
                 >

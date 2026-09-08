@@ -3,6 +3,7 @@ services:
     name: sahay-backend
     env: node
     plan: free
+    rootDir: server
     buildCommand: npm install
     startCommand: npm start
     envVars:
@@ -12,5 +13,5 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: PORT
-        value: 10000 
+      - key: ALLOWED_ORIGINS
+        sync: false

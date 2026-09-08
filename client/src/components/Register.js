@@ -1,21 +1,10 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-
-// API base URL - supports both Netlify functions and Render backend
-const API_BASE_URL = process.env.REACT_APP_API_URL || 
-  (process.env.NODE_ENV === 'production' 
-    ? (process.env.REACT_APP_USE_RENDER === 'true' 
-        ? 'https://sahay-backend.onrender.com' 
-        : '/.netlify/functions/api')
-    : 'http://localhost:5000');
+import api from '../api';
 
 function Register({ onRegistered }) {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    role: 'NGO'
-  });
+  const [formData, setFormData] = useState({ email: '', password: '', role: 'NGO' });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -24,17 +13,20 @@ function Register({ onRegistered }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+    setError('');
+
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await axios.post(`${API_BASE_URL}/api/auth/register`, formData);
+      await api.post('/api/auth/register', formData);
       alert('✅ Registration successful! You can now log in.');
-      onRegistered(); // switch to login
+      onRegistered();
     } catch (err) {
-      if (err.response && err.response.data && err.response.data.error) {
-        alert(`❌ Registration failed: ${err.response.data.error}`);
-      } else {
-        alert('❌ Registration failed: Server error');
-      }
+      setError(err.response?.data?.error || 'Registration failed: server error.');
     } finally {
       setLoading(false);
     }
@@ -43,7 +35,9 @@ function Register({ onRegistered }) {
   return (
     <form onSubmit={handleSubmit}>
       <h2>📝 Create Account</h2>
-      
+
+      {error && <div className="message error">❌ {error}</div>}
+
       <div className="form-group">
         <label htmlFor="email">📧 Email Address</label>
         <input
@@ -55,9 +49,7 @@ function Register({ onRegistered }) {
           onChange={handleChange}
           required
           autoComplete="email"
-          aria-describedby="email-help"
         />
-        <div id="email-help" className="sr-only">Enter your email address for account registration</div>
       </div>
 
       <div className="form-group">
@@ -66,33 +58,25 @@ function Register({ onRegistered }) {
           id="password"
           name="password"
           type="password"
-          placeholder="Create a strong password"
+          placeholder="Create a strong password (min 8 characters)"
           value={formData.password}
           onChange={handleChange}
           required
+          minLength={8}
           autoComplete="new-password"
-          aria-describedby="password-help"
         />
-        <div id="password-help" className="sr-only">Create a strong password for your account</div>
       </div>
 
       <div className="form-group">
         <label htmlFor="role">👥 Role</label>
-        <select
-          id="role"
-          name="role"
-          value={formData.role}
-          onChange={handleChange}
-          aria-describedby="role-help"
-        >
+        <select id="role" name="role" value={formData.role} onChange={handleChange}>
           <option value="NGO">🏥 NGO (Non-Governmental Organization)</option>
           <option value="Admin">👨‍💼 Admin (Administrator)</option>
         </select>
-        <div id="role-help" className="sr-only">Select your role in the healthcare system</div>
       </div>
 
-      <button 
-        type="submit" 
+      <button
+        type="submit"
         disabled={loading}
         aria-label={loading ? 'Creating account, please wait' : 'Create new account'}
       >

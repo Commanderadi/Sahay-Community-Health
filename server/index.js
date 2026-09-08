@@ -4,110 +4,101 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 
 const clinicRoutes = require('./routes/clinic');
 const authRoutes = require('./routes/auth');
 
-const path = require('path');
-const fs = require('fs');
+dotenv.config({ path: path.join(__dirname, '.env') });
 
-// Load environment variables manually if dotenv fails
-const envPath = path.join(__dirname, '.env');
-if (fs.existsSync(envPath)) {
-  const envContent = fs.readFileSync(envPath, 'utf8');
-  envContent.split('\n').forEach(line => {
-    const [key, value] = line.split('=');
-    if (key && value) {
-      process.env[key.trim()] = value.trim();
-    }
-  });
+// Fail fast if required secrets are missing instead of falling back to
+// insecure defaults.
+const requiredEnv = ['MONGO_URI', 'JWT_SECRET'];
+const missing = requiredEnv.filter((key) => !process.env[key]);
+if (missing.length) {
+  console.error(`Missing required environment variables: ${missing.join(', ')}`);
+  console.error('Create server/.env from server/.env.example and set these values.');
+  process.exit(1);
 }
 
-dotenv.config({ path: envPath });
 const app = express();
 const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI;
 
-// Debug: Check if environment variables are loaded
-console.log('Environment check:');
-console.log('MONGO_URI:', process.env.MONGO_URI ? 'Loaded' : 'NOT LOADED');
-console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Loaded' : 'NOT LOADED');
-console.log('PORT:', process.env.PORT || 5000);
-
-// CORS configuration for both development and production
+// CORS: allow the local dev client plus any origins listed in ALLOWED_ORIGINS
+// (comma-separated) so production URLs are configured, not hardcoded.
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://sahaycommunity.netlify.app',
-  'https://sahaycommunity.netlify.app/',
-  'https://sahay-app.netlify.app',
-  'https://sahay-app.netlify.app/'
+  ...(process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+    : []),
 ];
 
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+  origin(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, server-to-server).
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
+    return callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
 }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-// Security headers
+
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://sahaycommunity.netlify.app"],
-      frameAncestors: ["'none'"]
-    }
+      imgSrc: ["'self'", 'data:', 'https:'],
+      frameAncestors: ["'none'"],
+    },
   },
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-// Rate limiting
-app.use(rateLimit({ 
-  windowMs: 15 * 60 * 1000, 
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
   max: 100,
-  message: { error: 'Too many requests, please try again later.' }
+  message: { error: 'Too many requests, please try again later.' },
 }));
 
-// Basic error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
-});
-
-// Use environment variable or fallback
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://aditya123:aditya123@cluster0.pirxh3j.mongodb.net/sahay?retryWrites=true&w=majority';
-
-console.log('Attempting to connect with URI:', MONGO_URI);
-const JWT_SECRET = process.env.JWT_SECRET || 'sahay_jwt_secret_key_2024';
-
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
-
-// Test endpoint to verify backend-frontend connectivity
+// Health / connectivity check used by the frontend.
 app.get('/api/test', (req, res) => {
-  res.json({ 
-    message: 'Backend is connected!', 
+  res.json({
+    message: 'Backend is connected!',
     timestamp: new Date().toISOString(),
-    status: 'success'
+    status: 'success',
   });
 });
 
 app.use('/api/clinics', clinicRoutes);
 app.use('/api/auth', authRoutes);
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// 404 for unknown API routes.
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
 });
+
+// Central error handler — must be registered after the routes.
+app.use((err, req, res, next) => {
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
+
+mongoose.connect(MONGO_URI)
+  .then(() => {
+    console.log('MongoDB connected');
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  })
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });

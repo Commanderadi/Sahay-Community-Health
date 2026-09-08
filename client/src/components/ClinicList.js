@@ -1,25 +1,16 @@
 import React from 'react';
-import axios from 'axios';
+import api from '../api';
 
-// API base URL - supports both Netlify functions and Render backend
-const API_BASE_URL = process.env.REACT_APP_API_URL || 
-  (process.env.NODE_ENV === 'production' 
-    ? (process.env.REACT_APP_USE_RENDER === 'true' 
-        ? 'https://sahay-backend.onrender.com' 
-        : '/.netlify/functions/api')
-    : 'http://localhost:5000');
-
-function ClinicList({ clinics, onDelete, role, setMessage }) {
+function ClinicList({ clinics, onDelete, setMessage }) {
   const handleDelete = (id) => {
-    const token = localStorage.getItem('token');
-    const headers = { Authorization: `Bearer ${token}` };
+    if (!window.confirm('Delete this clinic? This cannot be undone.')) return;
 
-    axios.delete(`${API_BASE_URL}/api/clinics/${id}`, { headers })
+    api.delete(`/api/clinics/${id}`)
       .then(() => {
-        setMessage("✅ Clinic deleted successfully.");
+        setMessage('✅ Clinic deleted successfully.');
         onDelete();
       })
-      .catch(() => setMessage("❌ Failed to delete clinic."));
+      .catch((err) => setMessage(`❌ ${err.response?.data?.error || 'Failed to delete clinic.'}`));
   };
 
   if (clinics.length === 0) {
@@ -44,20 +35,18 @@ function ClinicList({ clinics, onDelete, role, setMessage }) {
             </div>
             <div>
               <p><span className="icon">👤</span> <strong>Added by:</strong> {clinic.addedBy || 'Unknown'}</p>
-              <p><span className="icon">📅</span> <strong>Added:</strong> {new Date(clinic.createdAt).toLocaleDateString()}</p>
+              <p><span className="icon">📅</span> <strong>Added:</strong> {clinic.createdAt ? new Date(clinic.createdAt).toLocaleDateString() : '—'}</p>
             </div>
           </div>
-          {role !== 'Visitor' && (
-            <div className="clinic-actions">
-              <button 
-                className="danger" 
-                onClick={() => handleDelete(clinic._id)}
-                aria-label={`Delete clinic: ${clinic.name}`}
-              >
-                🗑️ Delete Clinic
-              </button>
-            </div>
-          )}
+          <div className="clinic-actions">
+            <button
+              className="danger"
+              onClick={() => handleDelete(clinic._id)}
+              aria-label={`Delete clinic: ${clinic.name}`}
+            >
+              🗑️ Delete Clinic
+            </button>
+          </div>
         </div>
       ))}
     </div>
