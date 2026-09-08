@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import AuroraBackground from './AuroraBackground';
+import BrandMark from './BrandMark';
 import Button from './ui/Button';
 import { Input, Select } from './ui/Field';
 
@@ -48,7 +50,7 @@ export default function AuthScreen() {
         login({
           token: res.data.token,
           role: res.data.role,
-          email: form.email.trim(),
+          email: res.data.email || form.email.trim(),
           remember,
         });
         toast.success('Welcome back!');
@@ -69,17 +71,24 @@ export default function AuthScreen() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-brand-50 px-4 py-12 dark:from-slate-950 dark:via-slate-950 dark:to-brand-950/40">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-white to-brand-50 px-4 py-12 dark:from-slate-950 dark:via-slate-950 dark:to-brand-950/40">
+      <AuroraBackground />
+
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="w-full max-w-md"
+        className="relative w-full max-w-md"
       >
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30">
-            <Activity className="h-7 w-7" />
-          </div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30"
+          >
+            <BrandMark size={30} draw />
+          </motion.div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Sahay</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Community health clinic directory
