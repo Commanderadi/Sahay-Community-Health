@@ -6,12 +6,13 @@ node_modules/
 client/build/
 client/dist/
 
-# Environment variables
+# Environment variables (but keep .env.example templates)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+!.env.example
 
 # Logs
 npm-debug.log*
