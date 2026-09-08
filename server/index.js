@@ -1,3 +1,4 @@
+const dns = require('dns');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -10,6 +11,19 @@ const clinicRoutes = require('./routes/clinic');
 const authRoutes = require('./routes/auth');
 
 dotenv.config({ path: path.join(__dirname, '.env') });
+
+// Some environments hand Node a loopback DNS resolver (127.0.0.1) with nothing
+// listening, which breaks the mongodb+srv lookup. Fall back to public resolvers
+// in that case. Override with DNS_SERVERS (comma-separated) if needed.
+const servers = dns.getServers();
+const onlyLoopback = servers.every((s) => s === '127.0.0.1' || s === '::1');
+if (onlyLoopback || process.env.DNS_SERVERS) {
+  const fallback = process.env.DNS_SERVERS
+    ? process.env.DNS_SERVERS.split(',').map((s) => s.trim()).filter(Boolean)
+    : ['8.8.8.8', '8.8.4.4', '1.1.1.1'];
+  dns.setServers(fallback);
+  console.log('DNS resolvers set to:', fallback.join(', '));
+}
 
 // Fail fast if required secrets are missing instead of falling back to
 // insecure defaults.
