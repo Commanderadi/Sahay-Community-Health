@@ -17,4 +17,16 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// When the server rejects a token as invalid/expired, broadcast so the
+// AuthContext can log the user out and surface a message.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && localStorage.getItem('token')) {
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    }
+    return Promise.reject(error);
+  },
+);
+
 export default api;
