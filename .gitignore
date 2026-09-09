@@ -91,3 +91,8 @@ Thumbs.db
 
 # Netlify
 .netlify/
+
+# Large raw import datasets (kept locally, not committed)
+data/*.csv
+data/*.xlsx
+data/*.json
